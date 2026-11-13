@@ -39,7 +39,6 @@
     }
   }
   function wordmark(parent) { parent.append(el('div', 'wordmark', 'Curb Your YouTube')); }
-  // Homepage browse time only applies while homepage browsing is limited.
   function syncDependents() {
     const hideHome = pendingSettings.get('hideHome')?.value ?? data.settings.hideHome;
     root.querySelectorAll('[data-setting="homeMinutes"]').forEach(select => { select.disabled = !hideHome; });
@@ -109,11 +108,10 @@
     const granted = (await api.permissions.getAll()).data_collection || [];
     return optionalData.every(type => granted.includes(type));
   }
-  // Video summaries: the user's own Gemini keys. Settings only ever receives masked keys.
   function summariesSection() {
     const section = el('section', 'section'); section.id = 'summaries';
     section.append(el('h2', '', 'Video summaries'), el('p', 'summary-intro',
-      'Add your Gemini API key, then hover over a public video title and select Summarize. Gemini can be slow on longer videos. Summaries can fail when your project hits its usage limit.'));
+      'Add a Gemini API key, then hover over a public video title and select Summarize. Long videos can take longer. Your project’s usage limits apply.'));
     if (Curb.STORE_BUILD && !data.enabled) {
       refreshSummaryKeys = null;
       section.append(el('p', 'muted', 'Enable Curb in Session to set up Gemini.'));
@@ -132,7 +130,7 @@
     form.append(head, addRow);
     let consent;
     if (Curb.STORE_BUILD) {
-      form.append(el('p', 'muted', 'Summarize sends Google the video link and your API key. Billing and Gemini’s data terms apply.'));
+      form.append(el('p', 'muted', 'Summarize sends Google the video link and your API key. You can also opt in to sharing your intent. Billing and Gemini’s data terms apply.'));
       const row = el('label', 'key-consent');
       consent = el('input'); consent.type = 'checkbox'; consent.required = true;
       row.append(consent, el('span', '', 'I’m 18 or older, using Gemini for work in a supported region, and using my own billing-enabled project with request logging and data sharing turned off.'));
@@ -143,7 +141,7 @@
     const list = el('ul', 'key-list'); list.hidden = true; list.setAttribute('aria-label', 'Saved Gemini API keys');
     const status = el('div', 'visually-hidden'); status.setAttribute('role', 'status');
     const permission = el('div', 'key-permission'); permission.hidden = true;
-    const allow = button('Allow access', async () => {
+    const allow = button('Allow Gemini access', async () => {
       allow.disabled = true;
       try {
         if (!await api.permissions.request(GEMINI_ORIGINS)) throw new Error('Allow Google access to use summaries.');
@@ -152,7 +150,7 @@
       } catch (error) { notify(error.message, true); }
       finally { allow.disabled = false; }
     }, 'secondary');
-    permission.append(el('span', '', 'Google access is required.'), allow);
+    permission.append(allow);
     let revision, keyCount = 0;
     const syncPermission = async () => {
       try { const granted = await geminiAllowed(); permission.hidden = granted || !keyCount; }
@@ -206,7 +204,7 @@
     panel.append(form, list, status, permission, toggle('summaryClip', 'Limit summaries to the first 5 minutes'));
     if (Curb.STORE_BUILD) panel.append(toggle('summaryIntent', 'Include my intent in Gemini requests'));
     const privacy = el('p', 'muted summary-privacy', Curb.STORE_BUILD
-      ? 'When you select Summarize, Google receives the video link and your API key. Your intent is shared only if you turn on the option above. Curb encrypts the saved key on this device. '
+      ? 'Curb encrypts your saved key on this device. '
       : 'Google receives the video link and your session intent, if set, only when you select Summarize. Curb saves your key on this device. ');
     const details = el('a', '', 'Privacy details'); details.href = 'privacy.html#video-summaries'; privacy.append(details);
     section.append(panel, privacy);
@@ -224,7 +222,6 @@
   function buildPopup() {
     const box = el('main', 'popup'); wordmark(box); box.append(sessionCard());
     if (data.session && !data.session.stopped) box.append(button('Finish this session', async () => { try { await send('STOP', { sessionId: data.session.id }); render(); } catch (e) { notify(e.message, true); } }, 'secondary finish'));
-    // The popup holds the most-used controls; Settings has the full list.
     const controls = el('div', 'popup-controls');
     controls.append(thumbnailRow(), intervalRow());
     const quick = new Set(['hideHome', 'hideShorts', 'hideRelated', 'hideComments', 'disableAutoplay']);
@@ -242,7 +239,7 @@
     return field;
   }
   function enableNotice(section) {
-    section.append(el('p', 'muted', 'Curb reads YouTube pages to hide distractions and track watch time. Your intent, saved searches, and watch time stay in this Chrome profile.'),
+    section.append(el('p', 'muted', 'Curb reads YouTube pages to hide distractions and track watch time. Curb stores your data in this Chrome profile.'),
       button('Enable Curb', async () => {
         try { await send('ENABLE'); render(); document.querySelector(location.hash === '#saved-searches' ? '#search-name' : '#custom-intent')?.focus(); }
         catch (error) { notify(error.message, true); }
@@ -265,7 +262,7 @@
     const save = el('button', 'primary', 'Save intent'); save.type = 'submit';
     const suggest = el('button', 'secondary', 'Save and get YouTube suggestions'); suggest.type = 'submit';
     const actions = el('div', 'entry-actions'); actions.append(save, suggest);
-    form.append(actions, el('p', 'muted', 'Getting suggestions puts your intent in YouTube’s search box. YouTube can receive the text before you submit a search.'));
+    form.append(actions, el('p', 'muted', 'YouTube can receive your intent for suggestions before you submit a search.'));
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const intent = field.value.trim();

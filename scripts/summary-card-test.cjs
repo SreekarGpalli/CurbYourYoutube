@@ -1,9 +1,3 @@
-// Summary card edge cases, with real pointer input in both browsers:
-// placement beside (never over) the source video in every corner and on the watch page (never over the
-// player), staying between YouTube's header and Curb's bar at desktop and phone widths and after a resize,
-// hover intent (sweeping across titles shows nothing), no hover popup over the open card, and the card
-// giving way to prompts. No network: the profile never grants the Gemini permission, so a summary stops
-// with an explanation, which still opens the full-size card.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -28,8 +22,7 @@ async function run(name) {
     const s = document.getElementById('curb-extension-root').shadowRoot, tip = s.querySelector('aside.preview');
     const box = n => { const r = n.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
     return { open: !tip.hidden, card: box(tip), bar: box(s.querySelector('.bar')), head: box(document.querySelector('#masthead-container')),
-      player: document.querySelector('#movie_player') ? box(document.querySelector('#movie_player')) : null, viewport: [innerWidth, innerHeight],
-      text: tip.innerText.replace(/\s+/g, ' ').slice(0, 120) };
+      player: document.querySelector('#movie_player') ? box(document.querySelector('#movie_player')) : null, viewport: [innerWidth, innerHeight] };
   });
   const overlap = (a, b) => b ? Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) : 0;
   const source = id => d.evaluate(p, id => { const r = document.getElementById(id).getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; }, id);

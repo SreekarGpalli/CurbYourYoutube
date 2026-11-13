@@ -20,7 +20,7 @@ for (const file of sourceFiles) {
     execFileSync(process.execPath, ['--check', `extension/${file}`]);
     const source = await readFile(`extension/${file}`, 'utf8');
     assert(!/XMLHttpRequest|WebSocket|sendBeacon|storage\.sync|\beval\s*\(/.test(source), `${file}: unexpected network or dynamic-code API`);
-    // Video summaries are the only network feature: one call site, in the background script, to Gemini only.
+    // Gemini uses the only fetch call. Hover thumbnails load through images.
     const fetches = source.match(/\bfetch\s*\(/g) || [];
     if (file === 'background.js') {
       assert.equal(fetches.length, 1, 'background.js: exactly one fetch call site');
@@ -58,6 +58,8 @@ for (const browser of releaseTargets) {
       assert.equal(await readFile(base + file, 'utf8'), storeSource(await readFile('extension/' + file, 'utf8')), `${file}: stale store build`);
     assert.deepEqual(await readFile(base + 'local-storage.js'), await readFile('store/local-storage.js'));
     const hostedPolicy = await readFile('dist/chrome-store-site/privacy.html', 'utf8');
+    assert.deepEqual(await files('dist/chrome-store-site'), ['index.html', 'pages.css', 'privacy.html']);
+    assert.deepEqual(await readFile('dist/chrome-store-site/index.html'), await readFile('store/index.html'));
     assert.equal(hostedPolicy, await readFile('store/privacy.html', 'utf8'));
     assert.equal((await readFile(base + 'privacy.html', 'utf8')).replace('    <a href="options.html">← Back to settings</a>\n', ''), hostedPolicy);
     assert.deepEqual(await readFile(base + 'pages.css'), await readFile('dist/chrome-store-site/pages.css'));

@@ -19,8 +19,6 @@ async function run(name) {
   });
   const checkSettings = async p => {
     await d.activate(p);
-    const more = await d.evaluate(p, () => !!document.querySelector('.popup-more'));
-    if (more) await d.click(p, 'document.querySelector(".popup-more summary")');
     const controls = await d.evaluate(p, () => [...document.querySelectorAll('[data-setting]')].map(n => ({ key: n.dataset.setting, type: n.type, values: n.tagName === 'SELECT' ? [...n.options].map(o => o.value) : null })));
     const originals = (await get(p)).settings;
     for (const { key, type, values } of controls) {

@@ -30,7 +30,6 @@
     document.documentElement.style.setProperty('--curb-bar-height', `${height}px`);
   });
   const style = document.createElement('style');
-  // This stylesheet is embedded to keep content-script startup network-free.
   style.textContent = `
     :host{all:initial;color-scheme:dark;font:14px/1.55 "Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;color:#ededed}
     :host>div,:host>aside{color-scheme:dark;font:14px/1.55 "Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;color:#ededed}
@@ -63,7 +62,7 @@
     .error{color:#ffb4a5;font-size:12px;margin:10px 0}
     .video-title{border-left:2px solid #888;padding:4px 0 4px 14px;margin:22px 0 16px;font-size:16px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
     .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border-block:1px solid #3a3a3a;padding:20px 0;margin:22px 0}.summary>div+div{border-left:1px solid #3a3a3a;padding-left:16px}.summary b{display:block;font:500 25px/1.4 "Cascadia Mono",Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-1px}.summary span{font-size:11px;color:#a3a3a3}
-    .home{position:fixed;inset:110px 24px var(--curb-bar-height,60px);max-width:540px;margin:auto;padding:28px;color:#171717;overflow:auto;pointer-events:auto}:host([data-yt-dark]) .home{color:#f1f1f1}.home button{pointer-events:auto}.home h1{font-size:26px}.home p{font-size:14px}
+    .home{position:fixed;inset:110px 24px var(--curb-bar-height,60px);max-width:540px;margin:auto;padding:28px;color:#171717;overflow:auto;pointer-events:auto}:host([data-yt-dark]) .home{color:#f1f1f1}.home button{pointer-events:auto}.home h1{font-size:26px}
     .home .actions{pointer-events:auto}:host([data-native-search]) .home{display:none}.home-countdown{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;color:#ccc}
     .preview{position:fixed;z-index:6;right:20px;bottom:calc(var(--curb-bar-height,60px) + 16px);width:min(370px,calc(100vw - 32px));background:#202020;border:1px solid #666;border-radius:8px;box-shadow:0 8px 24px #0006;padding:12px 14px;overflow:auto;overflow-wrap:anywhere}
     .preview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.preview-head b{font-size:14px;font-weight:600;line-height:1.4;padding-top:3px}
@@ -97,7 +96,6 @@
   const ui = document.createElement('div'); shadow.append(ui);
   const thumbnailTip = document.createElement('aside'); thumbnailTip.className = 'thumbnail-preview'; thumbnailTip.hidden = true; thumbnailTip.setAttribute('aria-hidden', 'true'); shadow.append(thumbnailTip);
   const tip = document.createElement('aside'); tip.className = 'preview'; tip.hidden = true; tip.setAttribute('aria-labelledby', 'curb-preview-title'); shadow.append(tip);
-  // Appears beside a hovered video title once a Gemini key is set.
   const summarizePill = document.createElement('button'); summarizePill.type = 'button'; summarizePill.className = 'summarize-pill'; summarizePill.textContent = 'Summarize'; summarizePill.hidden = true; shadow.append(summarizePill);
   function el(tag, attrs = {}, text = '') {
     const node = document.createElement(tag);
@@ -129,7 +127,6 @@
     if (key && data.session.mode !== 'browse' && (approved !== key || approvedSession !== data.session.id)) return 'align';
     return '';
   }
-  // Casual browsing time covers the homepage too; focused sessions use the separate homepage allowance.
   function homeUnlocked() {
     return data?.homeRemainingMs > 0 || (data?.session?.mode === 'browse' && !data.session.stopped && data.browseRemainingMs > 0);
   }
@@ -187,14 +184,12 @@
     }
   }
   function redirectSubscriptions() {
-    // Route policy only: session broadcasts and preference rendering never navigate.
-    // Home has one fixed destination and cannot use an intent as a search query.
+    // Keep subscription redirects separate from state updates.
     const searching = searchEngaged && isNativeSearch(document.activeElement) && !!document.activeElement.value;
     if (!pendingSearch && !searching && data?.settings.redirectSubscriptions && location.pathname === '/feed/subscriptions' && data.session && !desiredMode()) {
       location.replace('https://www.youtube.com/');
     }
   }
-  // The intent the background would send with a summary request right now.
   function summaryIntent() {
     const session = data?.session;
     return session && !session.stopped && !session.casual && (!Curb.STORE_BUILD || data.settings.summaryIntent) ? session.intent || '' : '';
@@ -335,7 +330,6 @@
     await requestSearchAfterLoad(text, home);
     location.href = home;
   }
-  // A search requested before a page load continues once YouTube's search box exists.
   async function resumeSearchFocus() {
     if (mode || !data || searchLoading) return;
     searchLoading = true;
@@ -354,8 +348,6 @@
     } catch { /* A heartbeat retries after the background reconnects. */ }
     finally { searchLoading = false; }
   }
-  // Submit an intent: edits keep the running session, otherwise a new session starts.
-  // query opens YouTube's suggestions for typed text; savedQuery searches stored terms directly.
   async function chooseIntent(intent, query = '', savedQuery = '') {
     if (busy) return false;
     busy = true; pendingSearch = !!(savedQuery || (!Curb.STORE_BUILD && query)); errorText = '';
@@ -373,20 +365,16 @@
     } catch (error) {
       pendingSearch = false;
       errorText = error.message;
-      // Preserve the draft while refreshing the compare-and-swap token so
-      // a deliberate retry can follow a session change in another tab.
+      // Keep the draft and refresh the expected intent for a retry.
       try { const latest = await request('GET'); editingSessionId = latest.session?.id || null; editingIntent = latest.session?.intent ?? null; apply(latest); } catch { render(true); }
       return false;
     } finally { busy = false; }
   }
   function mount() {
-    // Keep prompts in the fullscreen top layer if exiting is delayed or denied.
-    // Fullscreen uses only the optional intent pill; the browsing header stays hidden.
-    // A native video element cannot render children; retain the document fallback.
+    // Mount in the fullscreen top layer when its element can render children.
     const full = document.fullscreenElement;
     const parent = full && !(full instanceof HTMLMediaElement) ? full : document.documentElement;
-    // The panel sits on YouTube's page background, so follow YouTube's own theme (its variables
-    // live inside ytd-app and do not reach this element).
+    // YouTube's theme variables stop at ytd-app.
     host.toggleAttribute('data-yt-dark', document.documentElement.hasAttribute('dark'));
     if (host.parentNode !== parent) parent.append(host);
     host.toggleAttribute('data-fullscreen', !!full);
@@ -436,7 +424,7 @@
       if (!host.isConnected) document.documentElement.append(host);
       const notice = el('section', { class: 'card consent', 'aria-labelledby': 'curb-enable' });
       notice.append(el('h1', { id: 'curb-enable' }, 'Enable Curb on YouTube'));
-      notice.append(el('p', {}, 'Curb reads this page to hide distractions and track watch time. Your intent, saved searches, and watch time stay in this Chrome profile.'));
+      notice.append(el('p', {}, 'Curb reads YouTube pages to hide distractions and track watch time. Curb stores your data in this Chrome profile.'));
       const actions = el('div', { class: 'actions' });
       actions.append(button('Enable Curb', event => { if (event.isTrusted) action('ENABLE'); }),
         button('Not now', () => { consentDismissed = true; host.remove(); }, 'secondary'));
@@ -709,7 +697,6 @@
   }
   let summaryToken = 0;
   const FIT_LABELS = { yes: 'Fits your intent', partly: 'Partly fits your intent', no: 'Does not fit your intent' };
-  // Draws a summary into the card: a partial one while Gemini is still writing, then the final one.
   function renderSummary(box, videoId, result) {
     const rows = [];
     if (result.clipped) rows.push(el('small', { class: 'summary-scope' }, 'First 5 minutes'));
@@ -764,8 +751,7 @@
       placeCard();
     } finally { if (streamTarget === target) streamTarget = null; }
   }
-  // A verdict judged against an earlier intent must never sit beside the new one: drop it (and any
-  // answer still on its way) and offer the same video's card again with a fresh Summarize button.
+  // Discard verdicts tied to the previous intent.
   function intentChanged() {
     if (tip.hidden || (!tip.querySelector('.ai-summary') && !streamTarget)) return;
     const link = cardLink, origin = cardOrigin;
@@ -794,8 +780,6 @@
     openPreview(link, 'preview');
     // Deliberately do not preventDefault: the browser's normal menu remains available.
   }
-  // ---- Card placement: beside the video it describes, never on top of it or the player. ----
-  // cardOrigin: 'preview' (right-click) or 'summary' (the hover Summarize button); cardLink: its video link.
   let cardSource = null, cardOrigin = null, cardLink = null, lastPointer = { x: -1, y: -1 };
   // Where the pointer really is: enter/leave events do not fire when the card appears under a still pointer.
   document.addEventListener('pointermove', event => { lastPointer = { x: event.clientX, y: event.clientY }; }, { capture: true, passive: true });
@@ -804,8 +788,7 @@
     const r = tip.getBoundingClientRect();
     return lastPointer.x >= r.left && lastPointer.x <= r.right && lastPointer.y >= r.top && lastPointer.y <= r.bottom;
   }
-  // A plain preview closes on its own, but never while the pointer is on it (someone is reading it);
-  // it closes within moments of the pointer leaving. Cards with a summary stay until closed.
+  // Keep a preview open while the pointer is over it.
   function scheduleAutoClose(delay = Curb.LIMITS.previewMs) {
     clearTimeout(previewTimeout);
     previewTimeout = setTimeout(function check() {
@@ -815,7 +798,6 @@
     }, delay);
   }
   const overlapArea = (a, b) => b ? Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) : 0;
-  // The usable screen: below YouTube's header, above Curb's bar.
   function cardArea() {
     const barTop = shadow.querySelector('.bar')?.getBoundingClientRect().top || innerHeight;
     const head = document.querySelector('#masthead-container, ytm-mobile-topbar-renderer')?.getBoundingClientRect();
@@ -876,12 +858,9 @@
     tip.hidden = true; cardSource = null; cardOrigin = null; cardLink = null;
     focus?.focus({ preventScroll: true });
   }
-  // Fills and shows Curb's card for a video link; returns what Summarize needs.
   function openPreview(link, origin) {
     const card = link.closest('ytd-video-renderer,ytd-rich-item-renderer,ytd-compact-video-renderer,ytd-grid-video-renderer,yt-lockup-view-model,ytm-video-with-context-renderer') || link;
-    // YouTube keeps empty placeholders and duplicate copies (e.g. two channel names, a time badge plus
-    // its label), so take the first non-empty match of the most specific element.
-    // Selectors are tried in priority order (a merged selector would return outer duplicates first).
+    // Try selectors in order to skip YouTube's duplicate labels and empty placeholders.
     const text = (...selectors) => selectors.flatMap(selector => [...card.querySelectorAll(selector)]).map(node => node.textContent.trim()).find(Boolean);
     const info = Curb.preview({
       title: text('#video-title', '.yt-lockup-metadata-view-model__title') || link.getAttribute('title') || link.textContent,
@@ -901,8 +880,7 @@
     const details = el('div', { class: 'preview-detail' });
     details.append(el('p', {}, info.text), el('small', {}, info.source));
     tip.replaceChildren(header, details);
-    // On demand only: nothing is sent anywhere unless this button is pressed.
-    // Page scripts can reach this shadow root, so only a real user gesture may start a request.
+    // Require a trusted click because page scripts can reach the local build's shadow root.
     if (!/^\/shorts\//.test(new URL(link.href).pathname)) tip.append(button('Summarize', event => { if (event.isTrusted) summarizeVideo(videoId, durationSeconds, event.detail === 0); }, 'summarize'));
     tip.hidden = false; cardSource = card; cardOrigin = origin; cardLink = link; placeCard();
     scheduleAutoClose();
@@ -921,14 +899,11 @@
     if (pillLink === link && !summarizePill.hidden) return;
     pillLink = link; summarizePill.hidden = false;
     summarizePill.setAttribute('aria-label', `Summarize ${link.textContent.trim().slice(0, 80)}`);
-    // Beside the end of the title; if that spot would cover the open card, before the title or just
-    // below it; hidden only when every spot would cover the card.
     const rect = link.getBoundingClientRect(), { width, height } = summarizePill.getBoundingClientRect();
     const top = Math.max(8, rect.top + Math.min(0, rect.height / 2 - 12));
     const spots = [{ x: rect.right + 8, y: top }, { x: rect.left - width - 8, y: top }, { x: rect.left, y: rect.bottom + 4 }]
       .map(({ x, y }) => ({ x: Math.max(8, Math.min(x, innerWidth - width - 12)), y: Math.max(8, Math.min(y, innerHeight - height - 8)) }));
-    // A spot squeezed back on screen can land on the title itself, where a click meant to open the video
-    // would send a summary request instead: such spots are skipped like spots that cover the card.
+    // Clamping can move a candidate over the title or the open card.
     const spot = spots.find(({ x, y }) => { const box = { left: x, top: y, right: x + width, bottom: y + height }; return !overlapsCard(box) && !overlapArea(box, rect); });
     if (!spot) return hidePill();
     summarizePill.style.left = `${spot.x}px`; summarizePill.style.top = `${spot.y}px`;
@@ -938,7 +913,6 @@
   summarizePill.addEventListener('pointerleave', () => { pillHovered = false; hidePillSoon(); });
   summarizePill.addEventListener('click', event => {
     event.stopPropagation();
-    // Page scripts can reach this shadow root, so only a real user gesture may start a request.
     if (!event.isTrusted) return;
     const link = pillLink; hidePill(); pillHovered = false;
     if (!link?.isConnected) return;
@@ -958,8 +932,7 @@
     if (event.shiftKey) event.preventDefault();
   });
   summarizePill.addEventListener('focusout', event => { if (event.relatedTarget !== pillLink) hidePillSoon(); });
-  // Hover intent: the Summarize button and thumbnail preview appear only once the pointer rests on a
-  // title, so sweeping across titles (for example on the way to the open card) shows nothing.
+  // Ignore quick passes over titles.
   const HOVER_INTENT_MS = 220;
   let intentLink = null, intentTimer = 0;
   document.addEventListener('pointerover', event => {
@@ -1015,9 +988,7 @@
     const source = card.querySelector('ytd-thumbnail img,yt-thumbnail-view-model img,.ytLockupViewModelContentImage img,.ytThumbnailViewModelHost img');
     if (loadedSrc(source)) return placeThumbnail(link, loadedSrc(source));
     closeThumbnail(); hoverLink = link;
-    // A collapsed thumbnail often never loads (YouTube lazy-loads only visible images, leaving src empty).
-    // Use the video's standard thumbnail from YouTube's own image host, or the card's image if it arrives first.
-    // pointerover does not fire again while the pointer stays on the title, so both paths re-check the hover.
+    // YouTube may never load a collapsed thumbnail. Use the first image that arrives.
     const show = src => { if (hoverLink === link && thumbnailAnchor !== link && src && !retired && data?.settings.thumbnailMode === 'hover' && !desiredMode()) placeThumbnail(link, src); };
     source?.addEventListener('load', () => show(loadedSrc(source)), { once: true });
     const standard = new Image();
@@ -1030,7 +1001,6 @@
   document.addEventListener('focusout', closeThumbnail, true);
   // Keep the homepage panel out of the way of YouTube's suggestion list while its search box is in use.
   const isNativeSearch = node => (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) && (node.name === 'search_query' || node === nativeSearchInput());
-  // Only while it holds text, which is when YouTube's suggestions cover the panel.
   const syncNativeSearch = event => {
     if ((Curb.STORE_BUILD && !data?.enabled) || !isNativeSearch(event.target)) return;
     searchEngaged = event.type !== 'focusout';
@@ -1051,8 +1021,6 @@
   document.addEventListener('play', event => {
     navigation(); if (desiredMode() && event.target instanceof HTMLMediaElement) event.target.pause();
   }, true);
-  // Approval belongs to the video, not to playback completion or same-video URL changes.
-  // navigation() invalidates it when the actual video identity changes.
   document.addEventListener('fullscreenchange', () => {
     closeCard(); closeThumbnail();
     hidePill();

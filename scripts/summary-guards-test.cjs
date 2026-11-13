@@ -1,10 +1,3 @@
-// 1.0.3 release regressions for the Summarize controls and hover thumbnails, in real browsers:
-// - page scripts cannot press Curb's Summarize controls (synthetic clicks are ignored);
-// - turning off right-click previews does not close a card opened with the hover Summarize button;
-// - the hover button never covers the title it belongs to, even at the right edge;
-// - keyboard focus on a title reveals the button and Tab reaches it;
-// - a thumbnail that finishes loading after switching to Hidden never appears;
-// - (Chromium, mocked Gemini) a verdict for an earlier intent is never shown beside a new intent.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');

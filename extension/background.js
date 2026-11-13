@@ -7,8 +7,7 @@ const localStore = globalThis.CurbStore || api.storage.local;
 let state, prefs, enabled = false, savedSearches = [], searchRequests = {}, queue = Promise.resolve(), lastSaved = 0;
 // Gemini API keys (primary first, then backups). Never included in snapshots or sent to any page.
 let geminiKeys = [], summaryKeyRevision = '', summaryCache = {};
-// Clear local data bumps the generation and aborts every running summary, so no request continues with a
-// deleted key or old intent and no result is written back. Shared runs are de-duplicated per cache key.
+// Reset invalidates pending requests and cache writes.
 let summaryGeneration = 0;
 const summaryRuns = new Map(), summaryControllers = new Set();
 const CLEARED = 'Local data was cleared. Add a Gemini API key in Settings.';
@@ -26,8 +25,7 @@ async function init() {
   if (memory.summaryCache && typeof memory.summaryCache === 'object' && !Array.isArray(memory.summaryCache)) summaryCache = memory.summaryCache;
   prefs = Curb.settings(local.settings);
   savedSearches = Curb.savedSearches(local.savedSearches);
-  // Fresh installs already have current defaults. Upgrades from older releases get
-  // each changed default once; later explicit choices are never overwritten.
+  // Apply each defaults migration once.
   const legacy = LEGACY_VERSION_KEYS.filter(key => local[key] === 1).length;
   const from = Number.isInteger(local.defaultsVersion) ? local.defaultsVersion : Curb.STORE_BUILD || local.settings === undefined ? DEFAULTS_VERSION : legacy;
   if (from < DEFAULTS_VERSION) {
@@ -283,7 +281,6 @@ function enqueue(work) {
   queue = job.catch(() => {});
   return job;
 }
-// Reads Gemini's event stream; returns a reply object that CurbSummary.parse understands.
 async function readStream(stream, onText) {
   const reader = stream.getReader(), decoder = new TextDecoder();
   let buffer = '', text = '', error = null, last = 0;
@@ -328,7 +325,6 @@ async function summarize(message, sender) {
     return { keys: [...geminiKeys], intent: !Curb.STORE_BUILD || prefs.summaryIntent ? session?.intent || '' : '', clip: prefs.summaryClip, generation: summaryGeneration };
   });
   if (!context.keys.length) throw new Error('Add a Gemini API key in Settings.');
-  // The cache key names what Gemini actually analyses: a clip, or the whole (known short) video.
   const clipped = CurbSummary.isClipped(context.clip, durationSeconds);
   const cacheKey = `${videoId}|${context.intent}|${clipped ? 'clip' : 'whole'}`;
   // Private-window summaries neither read nor enter the cache shared with regular windows.
@@ -337,7 +333,6 @@ async function summarize(message, sender) {
   if (!await allowedToContactGoogle())
     throw new Error('Allow Curb to contact Google in Settings.');
   if (context.generation !== summaryGeneration) throw new Error(CLEARED);
-  // A second request for the same video and intent waits for the first instead of calling Gemini again.
   if (shared && summaryRuns.has(cacheKey)) return summaryRuns.get(cacheKey);
   const run = askGemini({ videoId, durationSeconds, clipped, context, sender, requestId: message.requestId, cacheKey, shared });
   if (shared) {
@@ -348,7 +343,6 @@ async function summarize(message, sender) {
 }
 async function askGemini({ videoId, durationSeconds, clipped, context, sender, requestId, cacheKey, shared }) {
   const current = () => { if (context.generation !== summaryGeneration) throw new Error(CLEARED); };
-  // Remember the most telling failure of each kind; report the one that explains the outcome.
   const failures = {};
   const limits = CurbSummary.LIMITS_MS, attemptMs = clipped ? limits.attempt : limits.wholeAttempt;
   const deadline = Date.now() + (clipped ? limits.total : limits.wholeTotal);
@@ -372,21 +366,17 @@ async function askGemini({ videoId, durationSeconds, clipped, context, sender, r
           if (!/event-stream/.test(response.headers?.get?.('content-type') || '')) body = await response.json().catch(() => null);
         } catch {
           current();
-          // A stalled request counts as "busy": the other model may still answer within the time left.
           if (controller.signal.aborted) { failures.slow ??= timeout; continue; }
           failures.network = 'Could not reach Gemini. Check your internet connection.'; break attempts;
         }
-        // A streamed answer: forward what is readable so far to the tab that asked, then read the whole text.
         let streamError = null;
         if (response.ok && /event-stream/.test(response.headers?.get?.('content-type') || '') && response.body?.getReader) {
           try { body = await readStream(response.body, text => progress(sender, requestId, text)); }
           catch (error) { body = null; streamError = error.body || { error: { message: 'The answer stream broke off.' } }; }
         }
         current();
-        // The limit can also expire while the reply body is still arriving.
         if (controller.signal.aborted) { failures.slow ??= timeout; continue; }
         if (response.ok && !streamError) {
-          // An empty or unreadable reply from one model must not end the summary: the next may answer.
           let parsed;
           try { parsed = CurbSummary.parse(body); } catch (error) { failures.unreadable ??= error.message; continue; }
           const result = { ...parsed, keyPoints: CurbSummary.withinWindow(parsed.keyPoints, clipped, durationSeconds), videoId, intent: context.intent,
@@ -437,7 +427,6 @@ api.runtime.onMessage.addListener((message, sender, respond) => {
 api.tabs.onRemoved.addListener(id => {
   queue = queue.then(async () => {
     await init();
-    // Every browser tab closure arrives here; only tracked YouTube tabs matter.
     if (!(id in state.tabs)) return;
     Curb.advance(state, Date.now(), prefs);
     delete state.tabs[id];

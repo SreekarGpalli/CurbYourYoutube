@@ -84,7 +84,7 @@ async function playLocalVideo(page) {
     const options = await context.newPage(); await options.goto(`chrome-extension://${extensionId}/options.html`);
     await options.getByRole('heading', { name: 'Settings' }).waitFor();
     await options.getByLabel('Hide comments', { exact: true }).uncheck();
-    await options.getByText('Saved', { exact: true }).waitFor();
+    await options.waitForFunction(async () => (await chrome.storage.local.get('settings')).settings?.hideComments === false);
     await options.getByLabel('Break interval').selectOption('60');
     await options.evaluate(() => window.scrollTo(0, 0));
     await options.screenshot({ path: path.join(out, 'settings-overview.png') });

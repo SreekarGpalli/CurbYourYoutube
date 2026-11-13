@@ -231,6 +231,7 @@ async function run() {
     const policy = await context.newPage();
     await policy.goto(extensionUrl('privacy.html'));
     await policy.getByRole('heading', { name: 'Limited Use' }).waitFor();
+    assert.equal(await policy.locator('#video-summaries').textContent(), 'Gemini video summaries');
     assert.equal(await policy.getByRole('link', { name: 'Back to settings' }).getAttribute('href'), 'options.html');
     await policy.setViewportSize({ width: 390, height: 800 });
     assert(await policy.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

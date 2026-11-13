@@ -5,10 +5,7 @@
   const ORIGIN = 'https://generativelanguage.googleapis.com';
   const ENDPOINT = `${ORIGIN}/v1beta/interactions`;
   const API_REVISION = '2026-05-20';
-  // Tried in order for each key: quickest and most generous first. Free-tier limits per model, read from
-  // AI Studio on 2026-11-12 (requests per minute / per day): 3.5 and 3.1 Flash-Lite 15/500, 3.x Flash 5/20.
-  // Limits are per model, so each fallback adds capacity. Thinking is at each model's lowest allowed level.
-  // (Google also caps YouTube input at 8 hours of video per day per project, whichever model answers.)
+  // Try lower-latency models first.
   const MODELS = Object.freeze([
     Object.freeze({ id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite', thinking: 'minimal' }),
     Object.freeze({ id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', thinking: 'minimal' }),
@@ -16,15 +13,9 @@
     Object.freeze({ id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash', thinking: 'low' })
   ]);
   const MAX_KEYS = 5, CLIP_SECONDS = 300, CACHE_SIZE = 60;
-  // Streamed answers show the verdict before the rest, but Google spends nearly all the time watching the
-  // video first, so streaming gained ~1 s live while total time was higher (12-13 s vs 5-6 s). Off while
-  // compared; the stream reader stays so either kind of reply is handled.
+  // Streaming added latency in video tests. The parser still accepts streamed replies.
   const STREAM_ANSWERS = false;
-  // Never leave the viewer waiting: one attempt may take this long, and no new fallback attempt starts
-  // after the overall limit. Whole-video summaries get more room. Real clipped summaries take ~5-6 s;
-  // when Gemini is overloaded a stalled attempt is dropped after 12 s instead of making the viewer wait.
-  // No attempt may exceed 28 s: Chrome stops an extension worker whose fetch response takes over 30 s,
-  // which would end the summary before Curb could report the timeout or try the next model.
+  // Keep each attempt below Chrome's 30-second service worker fetch limit.
   const LIMITS_MS = Object.freeze({ attempt: 12000, total: 30000, wholeAttempt: 28000, wholeTotal: 60000 });
   // Firefox's built-in data consent: summaries send a video URL (browsing activity) and the typed
   // session intent (website activity). Optional, and requested only when a key is added.
@@ -32,7 +23,6 @@
   const VIDEO_ID = /^[A-Za-z0-9_-]{6,20}$/;
   const SCHEMA = Object.freeze({
     type: 'object',
-    // Verdict first: it is what the viewer reads first.
     properties: {
       verdict: { type: 'string', description: 'One sentence: watch or skip, and why, for this viewer.' },
       fits_intent: { type: 'string', enum: ['yes', 'partly', 'no', 'no intent'] },
@@ -44,13 +34,11 @@
     required: ['verdict', 'fits_intent', 'summary', 'key_points']
   });
 
-  // Older keys look like "AIza…"; auth keys (AI Studio's default since May 2026) start with "AQ." and are longer.
   function validKey(key) { return typeof key === 'string' && /^[A-Za-z0-9._-]{30,256}$/.test(key.trim()); }
   function keys(input) {
     if (!Array.isArray(input)) return [];
     return [...new Set(input.filter(validKey).map(key => key.trim()))].slice(0, MAX_KEYS);
   }
-  // Shown in Settings so a key can be recognised without displaying it.
   function mask(key) { return `${key.slice(0, 4)}…${key.slice(-4)}`; }
 
   // Whether a request analyses only the first CLIP_SECONDS (unknown durations are clipped when clipping is on).
@@ -74,17 +62,13 @@
       'Base everything on what is actually said and shown, not the title. Be concrete and very brief: the viewer wants an answer in seconds.',
       'key_points: 2 to 4 short items with real timestamps. fits_intent: compare with their purpose ("no intent" if none).'
     ].join(' ');
-    // Streamed so the verdict (first in the schema) can be shown while the rest is still being written.
-    // store: false opts out of Google's default server-side storage of the interaction (1 day on the
-    // free tier, 55 days on paid tiers). Curb never reuses an interaction, so nothing needs storing.
+    // Opt out of Gemini's interaction history.
     return { model: model.id, store: false, ...(STREAM_ANSWERS ? { stream: true } : {}), input: [{ type: 'text', text: prompt }, video],
       generation_config: { thinking_level: model.thinking },
       response_format: { type: 'text', mime_type: 'application/json', schema: SCHEMA } };
   }
 
-  // Text candidates from a reply, most specific first. The Interactions API (Api-Revision 2026-05-20)
-  // returns steps: [{ type: "thought" }, { type: "model_output", ... }]; other shapes are `output_text`,
-  // output items, or generateContent's candidates[].content.parts[]. Thought/reasoning parts are skipped.
+  // Gemini has returned several response shapes. Skip thought steps in each.
   const isThought = node => node?.thought === true || /thought|reason/i.test(String(node?.type || ''));
   function outputTexts(body) {
     const texts = [];
@@ -98,7 +82,6 @@
     walk(body);
     return texts;
   }
-  const outputText = body => outputTexts(body).join('');
   // A JSON object inside text that may also contain code fences or a sentence around it.
   function jsonIn(text) {
     const trimmed = String(text).trim().replace(/^```(?:json)?\s*|\s*```$/g, '');
@@ -168,13 +151,6 @@
     const reasons = (Array.isArray(error?.details) ? error.details : []).map(detail => detail?.reason).filter(Boolean);
     return { message: String(error?.message || '').replace(/\s+/g, ' ').trim().slice(0, 200), reason: reasons.join(','), status: String(error?.status || '') };
   }
-  // Which failures should move on to the next model or key.
-  // What a failed reply means, so the viewer is told the real reason:
-  //   key   - the key itself was refused        -> next key
-  //   quota - rate or daily limit (429)          -> next model, then next key
-  //   busy  - Google overloaded or a server error -> next model
-  //   model - this model is unavailable to this key -> next model
-  //   video - anything else (e.g. a private or unsupported video) -> stop and explain
   function classify(status, info = {}) {
     const { message = '', reason = '', status: code = '' } = info;
     if (keyRejected(status, message, reason)) return 'key';
@@ -186,14 +162,13 @@
     if (status === 400 && /thinking|generation_config|response_format|resolution|processing|fps|offset|unsupported|not supported|unknown name|invalid json payload/i.test(message)) return 'model';
     return 'video';
   }
-  const retryable = (status, message = '') => ['quota', 'busy', 'model'].includes(classify(status, { message }));
   function keyRejected(status, message = '', reason = '') {
     return status === 401 || status === 403 || /API_KEY_INVALID|ACCESS_TOKEN_TYPE_UNSUPPORTED|API_KEY_SERVICE_BLOCKED/.test(reason) ||
       /api key not valid|api key expired|permission/i.test(message);
   }
 
   const api = { ORIGIN, ENDPOINT, API_REVISION, MODELS, MAX_KEYS, CLIP_SECONDS, CACHE_SIZE, LIMITS_MS, STREAM_ANSWERS, VIDEO_ID, DATA_COLLECTION,
-    isClipped, timeSeconds, withinWindow, validKey, keys, mask, request, outputText, outputTexts, parse, partial, sseEvents, deltaText, errorInfo, classify, retryable, keyRejected };
+    isClipped, withinWindow, validKey, keys, mask, request, parse, partial, sseEvents, deltaText, errorInfo, classify };
   root.CurbSummary = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(globalThis);

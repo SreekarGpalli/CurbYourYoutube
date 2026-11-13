@@ -128,7 +128,6 @@ select:disabled { opacity: .5; cursor: not-allowed; }
 .policy-page h2 { margin-top: 22px; }
 .entry-form { display: grid; gap: 8px; max-width: 420px; margin-top: 12px; }
 .entry-form input { width: 100%; border: 1px solid var(--control); border-radius: 5px; background: #121212; color: var(--text); padding: 8px 10px; }
-.entry-form > button { justify-self: start; }
 .entry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .search-list { margin: 0; padding: 0; overflow-wrap: anywhere; }
 .search-list .row { gap: 8px; }

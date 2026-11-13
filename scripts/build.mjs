@@ -64,14 +64,26 @@ for (const browser of releaseTargets) {
     await writeFile(path.join(out, 'privacy.html'), privacy.replace('  </main>', '    <a href="options.html">← Back to settings</a>\n  </main>'));
     const site = path.join(dist, 'chrome-store-site');
     await mkdir(site, { recursive: true });
+    await cp(path.join(root, 'store/index.html'), path.join(site, 'index.html'));
     await writeFile(path.join(site, 'privacy.html'), privacy);
     await cp(path.join(out, 'pages.css'), path.join(site, 'pages.css'));
   } else await cp(path.join(root, 'extension'), out, { recursive: true });
   await mkdir(path.join(out, 'icons'), { recursive: true });
   for (const size of [16, 32, 48, 128]) await writeFile(path.join(out, 'icons', `${size}.png`), icon(size, store && size === 128 ? 16 : 0));
   const manifest = structuredClone(common);
-  if (browser !== 'firefox') { manifest.minimum_chrome_version = '120'; manifest.background = { service_worker: 'background.js' }; }
-  else { manifest.background = { scripts: ['core.js', 'summary.js', 'background.js'] }; manifest.browser_specific_settings = { gecko: { id: 'curb-your-youtube@local.extension', strict_min_version: '140.0', data_collection_permissions: { required: ['none'], optional: ['browsingActivity', 'websiteActivity'] } } }; }
+  if (browser === 'firefox') {
+    manifest.background = { scripts: ['core.js', 'summary.js', 'background.js'] };
+    manifest.browser_specific_settings = {
+      gecko: {
+        id: 'curb-your-youtube@local.extension',
+        strict_min_version: '140.0',
+        data_collection_permissions: { required: ['none'], optional: ['browsingActivity', 'websiteActivity'] }
+      }
+    };
+  } else {
+    manifest.minimum_chrome_version = '120';
+    manifest.background = { service_worker: 'background.js' };
+  }
   if (store) {
     manifest.description = 'Focus controls for YouTube™. Hide distractions, set a session intent, and take timed breaks.';
     manifest.incognito = 'not_allowed';
