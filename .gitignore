@@ -1,0 +1,8 @@
+dist/
+artifacts/
+node_modules/
+*.zip
+.env
+.env.*
+*.pem
+*.key

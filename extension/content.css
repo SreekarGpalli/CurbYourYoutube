@@ -1,0 +1,98 @@
+/* Static selectors are toggled by attributes; no repeated full-page DOM walks. */
+/* Compact cards keep titles and metadata in flow; previews float outside it. */
+html:is([data-curb-thumbnails="hidden"], [data-curb-thumbnails="hover"]) :is(
+  ytd-thumbnail, .ytLockupViewModelContentImage, yt-thumbnail-view-model,
+  .ytThumbnailViewModelHost, .yt-thumbnail-view-model, ytm-thumbnail-cover,
+  .video-thumbnail-container, .reel-item-endpoint,
+  ytd-expandable-metadata-renderer #thumbnail, ytd-macro-markers-list-item-renderer #thumbnail
+) { display: block !important; position: absolute !important; width: 1px !important; height: 1px !important; min-width: 0 !important; min-height: 0 !important; margin: 0 !important; opacity: 0 !important; overflow: hidden !important; pointer-events: none !important; }
+html:is([data-curb-thumbnails="hidden"], [data-curb-thumbnails="hover"]) :is(
+  ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer,
+  ytd-playlist-video-renderer, ytd-playlist-panel-video-renderer, yt-lockup-view-model
+) { position: relative !important; min-height: 0 !important; height: auto !important; }
+html:is([data-curb-thumbnails="hidden"], [data-curb-thumbnails="hover"]) :is(
+  .ytLockupViewModelHost, .ytLockupViewModelHostCompact, .ytLockupViewModelHostHorizontal
+) { display: block !important; min-height: 0 !important; }
+html:is([data-curb-thumbnails="hidden"], [data-curb-thumbnails="hover"]) :is(
+  ytd-video-renderer #dismissible, ytd-compact-video-renderer #dismissible
+) { display: block !important; }
+html:is([data-curb-thumbnails="hidden"], [data-curb-thumbnails="hover"]) :is(
+  ytd-video-renderer #details, ytd-compact-video-renderer #details,
+  .ytLockupViewModelMetadata, .ytLockupViewModelContentMetadata
+) { min-width: 0 !important; width: auto !important; margin-left: 0 !important; }
+html:is([data-curb-thumbnails="hidden"], [data-curb-thumbnails="hover"]) :is(
+  ytd-video-preview, #video-preview-container, .ytp-cued-thumbnail-overlay-image,
+  .ytp-videowall-still-image, .ytp-ce-covering-image
+) { display: none !important; }
+html[data-curb-ready] { --curb-bar-height: 60px; scroll-padding-bottom: calc(var(--curb-bar-height) + 16px); }
+html[data-curb-ready] body { padding-bottom: var(--curb-bar-height) !important; }
+html[data-curb-ready] ytd-app { padding-bottom: var(--curb-bar-height) !important; box-sizing: border-box; }
+html[data-curb-hide-explore] [data-curb-explore-control],
+html[data-curb-hide-shorts] [data-curb-shorts-control] { display: none !important; }
+html[data-curb-locked] ytd-app, html[data-curb-locked] ytm-app { visibility: hidden !important; }
+/* Shorts have standalone view models as well as legacy renderers. Match
+   concrete cards/links rather than hiding mixed sections of ordinary videos. */
+html[data-curb-hide-shorts] :is(
+  [data-curb-shorts-control], ytd-reel-item-renderer, ytm-reel-item-renderer, yt-shorts-lockup-view-model,
+  ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2,
+  .shortsLockupViewModelHost, ytd-shorts, ytm-shorts
+),
+html[data-curb-hide-shorts] :is(ytd-rich-shelf-renderer, ytd-shelf-renderer, grid-shelf-view-model, yt-grid-shelf-view-model):not(:has(a:is([href*="/watch?"],[href*="/live/"],[href*="/playlist?"]))):has(
+  yt-shorts-lockup-view-model, ytm-shorts-lockup-view-model, ytm-shorts-lockup-view-model-v2,
+  ytd-reel-item-renderer
+),
+html[data-curb-hide-shorts] :is(
+  ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer,
+  ytd-compact-video-renderer, yt-lockup-view-model, ytd-playlist-video-renderer,
+  ytd-playlist-panel-video-renderer, ytm-video-with-context-renderer,
+  ytm-compact-video-renderer, ytd-guide-entry-renderer, ytd-mini-guide-entry-renderer,
+  yt-tab-shape, tp-yt-paper-tab, ytm-pivot-bar-item-renderer
+):has(a:is([href="/shorts"], [href^="/shorts/"], [href^="/shorts?"],
+  [href^="https://www.youtube.com/shorts/"], [href^="https://youtube.com/shorts/"],
+  [href^="https://m.youtube.com/shorts/"], [href$="/shorts"], [href*="/shorts?"])),
+html[data-curb-hide-shorts] a:is([href="/shorts"], [href^="/shorts/"], [href^="/shorts?"],
+  [href^="https://www.youtube.com/shorts/"], [href^="https://youtube.com/shorts/"],
+  [href^="https://m.youtube.com/shorts/"], [href$="/shorts"], [href*="/shorts?"])
+{ display: none !important; }
+html[data-curb-hide-home] ytd-browse[page-subtype="home"] #contents,
+html[data-curb-hide-home] ytm-browse[tab-identifier="FEwhat_to_watch"],
+html[data-curb-hide-sidebar] ytd-watch-flexy #secondary,
+html[data-curb-hide-related] ytd-watch-next-secondary-results-renderer,
+html[data-curb-hide-related] ytm-item-section-renderer[data-content-type="related"],
+html[data-curb-hide-shorts] ytd-reel-shelf-renderer,
+html[data-curb-hide-shorts] ytd-rich-shelf-renderer[is-shorts]:not(:has(a:is([href*="/watch?"],[href*="/live/"],[href*="/playlist?"]))),
+html[data-curb-hide-shorts] ytm-reel-shelf-renderer,
+html[data-curb-hide-mixes] ytd-radio-renderer,
+html[data-curb-hide-mixes] ytd-compact-radio-renderer,
+html[data-curb-hide-mixes] ytd-rich-item-renderer:has(a[href*="list=RD"]),
+html[data-curb-hide-search-clutter] ytd-search ytd-shelf-renderer,
+html[data-curb-hide-search-clutter] ytd-search ytd-horizontal-card-list-renderer,
+html[data-curb-hide-explore] ytd-guide-entry-renderer:has(a[href^="/feed/explore"]),
+html[data-curb-hide-explore] ytd-guide-entry-renderer:has(a[href^="/feed/trending"]),
+html[data-curb-hide-explore] ytd-guide-section-renderer:has(a[href^="/feed/trending"]),
+html[data-curb-hide-more] ytd-guide-section-renderer:has(a[href^="/premium"]),
+html[data-curb-hide-more] [data-curb-more-control],
+html[data-curb-hide-subscriptions] [data-curb-subscriptions-control],
+html[data-curb-hide-subscriptions] ytd-guide-entry-renderer:has(a[href="/feed/subscriptions"]),
+html[data-curb-hide-subscriptions] ytd-mini-guide-entry-renderer:has(a[href="/feed/subscriptions"]),
+html[data-curb-hide-header] #masthead-container,
+html[data-curb-hide-header] ytm-mobile-topbar-renderer,
+html[data-curb-hide-notifications] ytd-notification-topbar-button-renderer,
+html[data-curb-hide-comments] ytd-comments,
+html[data-curb-hide-comments] ytm-comment-section-renderer,
+html[data-curb-hide-live-chat] ytd-live-chat-frame,
+html[data-curb-hide-live-chat] #chat-container,
+html[data-curb-hide-playlist] ytd-playlist-panel-renderer,
+html[data-curb-hide-end-wall] .ytp-endscreen-content,
+html[data-curb-hide-end-wall] .html5-endscreen,
+html[data-curb-hide-end-cards] .ytp-ce-element,
+html[data-curb-hide-merch] ytd-merch-shelf-renderer,
+html[data-curb-hide-merch] ytd-ticket-shelf-renderer,
+html[data-curb-hide-merch] ytd-donation-shelf-renderer,
+html[data-curb-hide-merch] ytd-product-shelf-renderer,
+html[data-curb-hide-info] ytd-watch-metadata,
+html[data-curb-hide-buttons] ytd-watch-metadata #actions,
+html[data-curb-hide-channel] ytd-watch-metadata #owner,
+html[data-curb-hide-description] ytd-watch-metadata #description,
+html[data-curb-hide-annotations] .ytp-cards-teaser,
+html[data-curb-hide-annotations] .ytp-cards-button { display: none !important; }
