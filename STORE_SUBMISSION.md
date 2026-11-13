@@ -2,13 +2,13 @@
 
 Run `npm run package` to rebuild and verify the Store candidate. Review the Gemini release condition below before submitting it in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
 
-- Upload package — `dist/curb-video-focus-chrome-store-1.0.3.zip`
+- Upload package — `dist/curb-your-youtube-chrome-store-1.0.3.zip`
 - Store icon — `dist/chrome-store/icons/128.png` (128 × 128 PNG)
 - Store screenshot — `artifacts/chrome-store/settings.png` (1280 × 800 PNG)
 - Session screenshot — `artifacts/chrome-store/youtube.png` (1280 × 800 PNG)
 - Privacy policy — bundled in **Settings → Privacy & data → Privacy policy** and published to GitHub Pages from the same source.
 
-The Curb Video Focus ZIP includes Gemini summaries, YouTube search suggestions, and hover thumbnails. [Store listing requirements](https://developer.chrome.com/docs/webstore/cws-dashboard-listing)
+The Curb Your YouTube ZIP includes Gemini summaries, YouTube search suggestions, and hover thumbnails. [Store listing requirements](https://developer.chrome.com/docs/webstore/cws-dashboard-listing)
 
 Run `npm run test:chrome-store -- --live` to recapture the screenshots from the built extension in Chromium.
 
@@ -31,14 +31,16 @@ Google’s unpaid terms may allow it to use submitted content and responses for 
 ## Listing
 
 **Name**
-Curb Video Focus
+Curb Your YouTube
+
+Google’s branding guidelines require written permission to use its trademarks in an extension name. Confirm permission for this title before submission. [Chrome Web Store branding guidelines](https://developer.chrome.com/docs/webstore/branding)
 
 **Short description**
 Focus controls for YouTube™. Hide distractions, set a session intent, and take timed breaks.
 
 **Full description**
 
-Curb Video Focus is an independent Chrome extension for YouTube™.
+Curb Your YouTube is an independent Chrome extension for YouTube™.
 
 Choose what you came to watch, or browse for five minutes. Check whether each video fits your intent. Take a break after 30 or 60 minutes of active use.
 

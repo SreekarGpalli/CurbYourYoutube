@@ -87,7 +87,7 @@ async function run() {
     await settings.getByRole('heading', { name: 'Video summaries', exact: true }).waitFor();
     const localManifest = JSON.parse(await fs.readFile('dist/chrome/manifest.json', 'utf8'));
     const storeManifest = await settings.evaluate(() => chrome.runtime.getManifest());
-    for (const field of ['version', 'manifest_version', 'minimum_chrome_version', 'permissions', 'optional_host_permissions', 'content_scripts', 'background', 'options_ui'])
+    for (const field of ['name', 'action', 'version', 'manifest_version', 'minimum_chrome_version', 'permissions', 'optional_host_permissions', 'content_scripts', 'background', 'options_ui'])
       assert.deepEqual(storeManifest[field], localManifest[field], field);
     assert.deepEqual(await fs.readFile('dist/chrome/summary.js'), await fs.readFile('dist/chrome-store/summary.js'));
     const localCore = require('../dist/chrome/core.js'), storeCore = require('../dist/chrome-store/core.js');

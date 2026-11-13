@@ -8,7 +8,7 @@ Released under the [MIT License](LICENSE).
 
 ## Chrome Web Store
 
-The Store edition is **Curb Video Focus**. Run `npm run package` to build the `curb-video-focus-chrome-store` candidate, including optional Gemini summaries, YouTube search suggestions, and hover thumbnails. See the [submission guide](STORE_SUBMISSION.md) for listing assets, the public privacy policy, and the Gemini release condition.
+The Store edition is **Curb Your YouTube**. Run `npm run package` to build the `curb-your-youtube-chrome-store` candidate, including optional Gemini summaries, YouTube search suggestions, and hover thumbnails. See the [submission guide](STORE_SUBMISSION.md) for listing assets, the public privacy policy, and the Gemini release condition.
 
 ## Install locally
 
@@ -48,7 +48,7 @@ npm test
 npm run check
 ```
 
-`npm run package` builds and verifies all three ZIPs in `dist` using Node built-ins. Use the `curb-video-focus-chrome-store` ZIP for Chrome Web Store submission.
+`npm run package` builds and verifies all three ZIPs in `dist` using Node built-ins. Use the `curb-your-youtube-chrome-store` ZIP for Chrome Web Store submission.
 
 `build` creates browser-specific Manifest V3 packages and original PNG icons. Chrome uses a service worker. Firefox uses an event background page. The Store target adds its own consent, encrypted local storage, and privacy page.
 

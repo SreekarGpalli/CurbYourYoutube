@@ -40,7 +40,8 @@ for (const browser of releaseTargets) {
   assert(!m.host_permissions && !m.web_accessible_resources && !m.externally_connectable);
   for (const file of [...m.content_scripts.flatMap(s => [...s.js, ...s.css]), m.action.default_popup, m.options_ui.page, ...Object.values(m.icons)]) assert((await stat(base + file)).size > 0);
   if (store) {
-    assert.equal(m.name, 'Curb Video Focus');
+    assert.equal(m.name, 'Curb Your YouTube');
+    assert.equal(m.action.default_title, m.name);
     assert.equal(m.incognito, 'not_allowed');
     assert.deepEqual(m.optional_host_permissions, ['https://generativelanguage.googleapis.com/*']);
     assert.equal(m.optional_permissions, undefined);

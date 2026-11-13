@@ -73,9 +73,7 @@ for (const browser of releaseTargets) {
   if (browser !== 'firefox') { manifest.minimum_chrome_version = '120'; manifest.background = { service_worker: 'background.js' }; }
   else { manifest.background = { scripts: ['core.js', 'summary.js', 'background.js'] }; manifest.browser_specific_settings = { gecko: { id: 'curb-your-youtube@local.extension', strict_min_version: '140.0', data_collection_permissions: { required: ['none'], optional: ['browsingActivity', 'websiteActivity'] } } }; }
   if (store) {
-    manifest.name = 'Curb Video Focus';
     manifest.description = 'Focus controls for YouTube™. Hide distractions, set a session intent, and take timed breaks.';
-    manifest.action.default_title = manifest.name;
     manifest.incognito = 'not_allowed';
     manifest.content_security_policy.extension_pages = "default-src 'self'; connect-src https://generativelanguage.googleapis.com; object-src 'none'; form-action 'none'; base-uri 'none'";
   }
