@@ -1,4 +1,4 @@
-// Exercise the full Store build in Chromium and capture its actual Settings page.
+// Exercise the Store build in Chromium and capture listing screenshots.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
@@ -7,11 +7,26 @@ const { until } = require('../tests/e2e-driver.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const youtube = 'https://www.youtube.com';
-const fixture = `<!doctype html><title>YouTube fixture</title><link rel="icon" href="data:,">
-<ytd-app><div id="masthead-container"><form action="/results"><input name="search_query" value="Existing site text"></form></div>
-<ytd-video-renderer><a id="video-title" href="/watch?v=Js05B8Z1ivE">Python basics</a>
-<div id="description-text">Variables and loops.</div><ytd-thumbnail><img></ytd-thumbnail></ytd-video-renderer></ytd-app>
-<script>window.siteInputs = []; addEventListener('input', e => window.siteInputs.push(e.data), true);</script>`;
+const fixture = `<!doctype html><html dark><meta charset="utf-8"><title>Python lists and loops - YouTube</title><link rel="icon" href="data:,">
+<style>
+  html { color-scheme: dark; }
+  body { margin: 0; background: #0f0f0f; color: #f1f1f1; font: 16px Arial, sans-serif; }
+  #masthead-container { display: grid; place-items: center; height: 56px; border-bottom: 1px solid #292929; }
+  input { width: 480px; padding: 10px 16px; border-radius: 24px; border: 1px solid #383838; background: #121212; font: inherit; }
+  main { max-width: 960px; margin: 96px auto; }
+  ytd-video-renderer { display: block; width: 420px; margin-bottom: 34px; }
+  #video-title { color: #f1f1f1; font-size: 20px; font-weight: 600; text-decoration: none; }
+  #channel-name, #description-text { margin: 7px 0; color: #aaa; font-size: 14px; }
+</style>
+<ytd-app><div id="masthead-container"><form action="/results"><input aria-label="Search" name="search_query" value="Existing site text"></form></div>
+<main><ytd-video-renderer><a id="video-title" href="/watch?v=Js05B8Z1ivE">Python lists and loops</a>
+<div id="channel-name"><yt-formatted-string>Python Workshop</yt-formatted-string></div>
+<p id="description-text">Create a list, add items, and loop through them.</p><ytd-thumbnail><img></ytd-thumbnail></ytd-video-renderer></main></ytd-app>
+<script>
+  const query = new URLSearchParams(location.search).get('search_query');
+  if (query) document.querySelector('[name=search_query]').value = query;
+  window.siteInputs = []; addEventListener('input', e => window.siteInputs.push(e.data), true);
+</script>`;
 
 async function run() {
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'curb-chrome-store-'));
@@ -62,6 +77,15 @@ async function run() {
       await page.mouse.click(point.x, point.y);
     };
     const heading = text => until(() => shadow((root, text) => root.querySelector('h1')?.textContent === text, text), text);
+    const output = path.resolve('artifacts/chrome-store');
+    await fs.mkdir(output, { recursive: true });
+    const capture = async (tab, name) => {
+      const png = await tab.screenshot({ path: path.join(output, `${name}.png`), animations: 'disabled' });
+      assert.equal(png.readUInt32BE(16), 1280, name);
+      assert.equal(png.readUInt32BE(20), 800, name);
+      assert.equal(png[24], 8, name);
+      assert.equal(png[25], 2, name); // RGB without alpha
+    };
 
     await page.goto(youtube);
     await heading('Enable Curb on YouTube');
@@ -97,12 +121,7 @@ async function run() {
     assert.deepEqual([...storeControls].sort(), [...Object.keys(localCore.DEFAULTS), 'summaryIntent'].sort());
     console.log(`chrome-store: PASS all ${Object.keys(localCore.DEFAULTS).length} local settings, presets, permissions and Gemini engine accounted for`);
     assert.deepEqual(await settings.getByLabel('Video thumbnails').locator('option').allTextContents(), ['Show normally', 'Reveal on hover', 'Always hidden']);
-    const output = path.resolve('artifacts/chrome-store');
-    await fs.mkdir(output, { recursive: true });
-    await settings.screenshot({ path: path.join(output, 'settings.png'), animations: 'disabled' });
-    const screenshot = await fs.readFile(path.join(output, 'settings.png'));
-    assert.equal(screenshot.readUInt32BE(16), 1280);
-    assert.equal(screenshot.readUInt32BE(20), 800);
+    await capture(settings, 'settings');
 
     await page.bringToFront();
     await click('Edit intent');
@@ -191,8 +210,13 @@ async function run() {
       globalThis.fetch = async (url, options) => {
         geminiCalls.push({ url, key: options.headers['x-goog-api-key'], body: JSON.parse(options.body) });
         return new Response(JSON.stringify({ output_text: JSON.stringify({
-          summary: 'The video introduces lists.', fits_intent: 'yes', verdict: 'Useful for practice.',
-          key_points: [{ time: '1:05', point: 'Creates a list.' }]
+          summary: 'Build a list of items, add to it with append(), and use a for loop to print each item.',
+          fits_intent: 'yes', verdict: 'Practices creating and iterating over Python lists.',
+          key_points: [
+            { time: '1:05', point: 'Create a list with square brackets.' },
+            { time: '2:18', point: 'Add another item with append().' },
+            { time: '3:42', point: 'Loop over the list with for.' }
+          ]
         }) }));
       };
     });
@@ -201,7 +225,7 @@ async function run() {
       await page.mouse.move(1000, 500);
       await page.locator('#video-title').hover();
       await click('Summarize');
-      await until(() => shadow(root => root.querySelector('.ai-summary')?.textContent.includes('The video introduces lists.')), 'summary rendered');
+      await until(() => shadow(root => root.querySelector('.ai-summary [data-complete]') !== null), 'summary rendered');
     };
     await summarize();
     const calls = () => worker.evaluate(() => geminiCalls);
@@ -216,7 +240,15 @@ async function run() {
     await until(() => worker.evaluate(() => CurbStore.get('settings').then(data => data.settings?.summaryIntent)), 'intent-sharing opt-in saved');
     await summarize();
     assert.match((await calls())[1].body.input[0].text, /Python examples/);
+    await until(() => shadow(root => root.querySelector('.ai-summary .intent-fit')?.textContent.includes('Fits your intent')), 'summary intent verdict');
+    assert.equal(await shadow(root => root.querySelectorAll('.ai-summary li a').length), 3);
+    await capture(page, 'gemini-summary');
     console.log('chrome-store: PASS Gemini key consent, encrypted key, scoped requests, and opt-in intent sharing');
+
+    await page.goto(`${youtube}/watch?v=Js05B8Z1ivE`);
+    await heading('Does this video fit your intent?');
+    await until(() => shadow(root => root.querySelector('[data-video-title]')?.textContent === 'Python lists and loops'), 'watch title shown');
+    await capture(page, 'video-intent');
 
     await settings.getByRole('button', { name: 'Clear local data…' }).click();
     await settings.getByRole('button', { name: 'Clear and reset' }).click();
@@ -244,12 +276,16 @@ async function run() {
       await page.locator('ytd-app').waitFor({ state: 'attached', timeout: 20000 });
       await click('Enable Curb');
       await heading('What brings you to YouTube?');
-      await page.screenshot({ path: path.join(output, 'youtube.png'), animations: 'disabled' });
+      await capture(page, 'youtube');
       await click('Practice programming');
       await click('Start session');
       await until(() => shadow(root => root.querySelector('.intent')?.textContent.includes('Practice programming')), 'live session started');
+      await heading('Search or browse');
+      assert.equal(await page.locator('html').getAttribute('data-curb-hide-home'), '');
+      await capture(page, 'youtube-home');
       console.log('chrome-store: PASS signed-out live YouTube consent and session start');
     }
+    console.log('chrome-store: PASS listing screenshots are 1280×800 RGB PNGs');
   } finally {
     await context?.close();
     assert.equal(path.dirname(profile), path.resolve(os.tmpdir()));

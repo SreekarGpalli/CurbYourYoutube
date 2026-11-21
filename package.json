@@ -1,6 +1,6 @@
 {
   "name": "curb-your-youtube",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "license": "MIT",
   "description": "YouTube distraction controls and session timers for Chrome and Firefox",

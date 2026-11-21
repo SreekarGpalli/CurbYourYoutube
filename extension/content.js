@@ -63,7 +63,7 @@
     .video-title{border-left:2px solid #888;padding:4px 0 4px 14px;margin:22px 0 16px;font-size:16px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
     .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border-block:1px solid #3a3a3a;padding:20px 0;margin:22px 0}.summary>div+div{border-left:1px solid #3a3a3a;padding-left:16px}.summary b{display:block;font:500 25px/1.4 "Cascadia Mono",Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-1px}.summary span{font-size:11px;color:#a3a3a3}
     .home{position:fixed;inset:110px 24px var(--curb-bar-height,60px);max-width:540px;margin:auto;padding:28px;color:#171717;overflow:auto;pointer-events:auto}:host([data-yt-dark]) .home{color:#f1f1f1}.home button{pointer-events:auto}.home h1{font-size:26px}
-    .home .actions{pointer-events:auto}:host([data-native-search]) .home{display:none}.home-countdown{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;color:#ccc}
+    .home .actions{pointer-events:auto}.home-countdown{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;color:#ccc}
     .preview{position:fixed;z-index:6;right:20px;bottom:calc(var(--curb-bar-height,60px) + 16px);width:min(370px,calc(100vw - 32px));background:#202020;border:1px solid #666;border-radius:8px;box-shadow:0 8px 24px #0006;padding:12px 14px;overflow:auto;overflow-wrap:anywhere}
     .preview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.preview-head b{font-size:14px;font-weight:600;line-height:1.4;padding-top:3px}
     .preview-close{flex:0 0 28px;height:28px;margin:-2px -4px 0 0;padding:0;border:1px solid transparent;border-radius:4px;background:none;color:#ccc;font-size:20px;line-height:1}.preview-close:hover{color:#fff;background:#343434}
@@ -294,7 +294,6 @@
       input.value = text;
       input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: text }));
       input.setSelectionRange(text.length, text.length);
-      host.toggleAttribute('data-native-search', !!text);
     } else
     input.select();
     fillingSearch = false;
@@ -999,12 +998,10 @@
   document.addEventListener('focusin', showThumbnail, true);
   document.addEventListener('pointerout', event => { const anchor = thumbnailAnchor || hoverLink; if (anchor && !anchor.contains(event.relatedTarget)) closeThumbnail(); }, true);
   document.addEventListener('focusout', closeThumbnail, true);
-  // Keep the homepage panel out of the way of YouTube's suggestion list while its search box is in use.
   const isNativeSearch = node => (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) && (node.name === 'search_query' || node === nativeSearchInput());
   const syncNativeSearch = event => {
     if ((Curb.STORE_BUILD && !data?.enabled) || !isNativeSearch(event.target)) return;
     searchEngaged = event.type !== 'focusout';
-    host.toggleAttribute('data-native-search', document.activeElement === event.target && !!event.target.value);
     if (!fillingSearch && event.isTrusted && (event.type === 'input' || (event.type === 'focusout' && !searchDraft))) clearSearchRequest();
   };
   for (const type of ['focusin', 'focusout', 'input']) document.addEventListener(type, syncNativeSearch, true);
@@ -1016,7 +1013,7 @@
     if (event.key === 'Escape') closeThumbnail();
     if (Curb.STORE_BUILD && !data?.enabled) return;
     if (isNativeSearch(event.target) && event.isTrusted && !['Tab', 'Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) clearSearchRequest();
-    if (isNativeSearch(event.target) && event.key === 'Escape') { searchEngaged = false; host.removeAttribute('data-native-search'); }
+    if (isNativeSearch(event.target) && event.key === 'Escape') searchEngaged = false;
   }, true);
   document.addEventListener('play', event => {
     navigation(); if (desiredMode() && event.target instanceof HTMLMediaElement) event.target.pause();

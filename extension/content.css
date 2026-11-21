@@ -30,6 +30,13 @@ html[data-curb-ready] ytd-app { padding-bottom: var(--curb-bar-height) !importan
 html[data-curb-hide-explore] [data-curb-explore-control],
 html[data-curb-hide-shorts] [data-curb-shorts-control] { display: none !important; }
 html[data-curb-locked] ytd-app, html[data-curb-locked] ytm-app { visibility: hidden !important; }
+/* Raise the header's stacking context above Curb's overlays while suggestions are open. */
+html[data-curb-ready]:not([data-curb-locked]) :is(#masthead-container, ytm-mobile-topbar-renderer):has(
+  .ytSearchboxComponentSuggestionsContainer:not([hidden]),
+  [name="search_query"][aria-expanded="true"],
+  :is(yt-searchbox, ytd-searchbox, ytm-searchbox, ytm-search-box) [role="listbox"]:not([hidden])
+),
+html[data-curb-ready]:not([data-curb-locked]) body > .sbdd_a { z-index: 2201 !important; }
 /* Shorts have standalone view models as well as legacy renderers. Match
    concrete cards/links rather than hiding mixed sections of ordinary videos. */
 html[data-curb-hide-shorts] :is(

@@ -2,10 +2,15 @@
 
 Run `npm run package` before uploading in the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
 
-- Upload package — `dist/curb-your-youtube-chrome-store-1.0.3.zip`
+- Upload package — `dist/curb-your-youtube-chrome-store-1.0.4.zip`
 - Store icon — `dist/chrome-store/icons/128.png` (128 × 128 PNG)
 - Store screenshot — `artifacts/chrome-store/settings.png` (1280 × 800 PNG)
 - Session screenshot — `artifacts/chrome-store/youtube.png` (1280 × 800 PNG)
+- Focused home — `artifacts/chrome-store/youtube-home.png`
+- Video intent check — `artifacts/chrome-store/video-intent.png`
+- Gemini summary with sample data — `artifacts/chrome-store/gemini-summary.png`
+- Promo tiles — [440 × 280](store/media/promo-small.png) and [1400 × 560](store/media/promo-marquee.png)
+- Listing homepage — [GitHub source](https://github.com/SreekarGpalli/CurbYourYoutube)
 - Privacy policy — [public URL](https://sreekargpalli.github.io/CurbYourYoutube/privacy.html)
 
 Refresh screenshots with `npm run test:chrome-store -- --live`. [Store listing requirements](https://developer.chrome.com/docs/webstore/cws-dashboard-listing)
@@ -32,11 +37,16 @@ Focus controls for YouTube™. Hide distractions, set a session intent, and take
 
 **Full description**
 
-Curb Your YouTube is an independent Chrome extension for YouTube™.
+Choose what you came to watch on YouTube™. Hide Shorts, recommendations, comments, and thumbnails, or reveal thumbnails on hover.
 
-Set a viewing intent or browse for five minutes. Check each video against your intent and take breaks after 30 or 60 minutes of active use. Hide Shorts, recommendations, comments, and other distractions. Use saved searches, hover thumbnails, or right-click previews.
+• Set a viewing goal or browse for five minutes.
+• Check whether a video fits your goal before it plays. Right-click a video for a quick preview.
+• Save searches and take a break after 30 or 60 minutes of active use.
+• Summarize public videos with an optional Gemini API key. Google’s usage limits apply.
 
-Settings, saved searches, API keys, and daily watch time stay in your Chrome profile. Saved searches and optional search suggestions send terms to YouTube. Hover thumbnails can request a YouTube image by video ID. Optional Gemini summaries send the video URL and your API key to Google. You can opt in to sending your intent. Gemini eligibility, billing, and data terms apply.
+Settings, saved searches, the saved API key, and daily watch time are stored in your Chrome profile. Saved searches and optional search suggestions send terms to YouTube. Hover previews may request a thumbnail by video ID. When you request a Gemini summary, Google receives the video URL and your API key. You can opt in to sharing your viewing goal. Gemini eligibility, billing, and data terms apply.
+
+Free and open source under the MIT license. See the code at https://github.com/SreekarGpalli/CurbYourYoutube
 
 YouTube is a trademark of Google LLC. Use of this trademark is subject to Google Permissions. [Chrome Web Store branding guidelines](https://developer.chrome.com/docs/webstore/branding)
 
